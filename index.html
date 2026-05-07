@@ -436,6 +436,7 @@
   let timerInterval = null;
   let seconds = 0;
   let noteType = 'Candidate Interview';
+  let hasSpoken = false;
 
   function setType(btn, type) {
     document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
@@ -462,6 +463,7 @@
     fullTranscript = '';
     isRecording = true;
     seconds = 0;
+    hasSpoken = false;
 
     document.getElementById('startBtn').style.display = 'none';
     document.getElementById('endBtn').style.display = 'inline-block';
@@ -480,6 +482,7 @@
     }, 1000);
 
     recognition.onresult = (e) => {
+      hasSpoken = true;
       let final = '';
       let interim = '';
       for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -497,7 +500,15 @@
     };
 
     recognition.onerror = (e) => {
-      if (e.error === 'no-speech') return;
+      if (e.error === 'no-speech') {
+        document.getElementById('statusMsg').textContent = 'listening — speak when ready...';
+        return;
+      }
+      if (e.error === 'not-allowed') {
+        stopRecording(false);
+        showError('Microphone access blocked. Check Chrome site permissions for this URL.');
+        return;
+      }
       stopRecording(false);
       showError('Microphone error: ' + e.error + '. Please try again.');
     };
@@ -525,14 +536,17 @@
     document.getElementById('recordZone').classList.remove('active');
     document.getElementById('recordHint').textContent = 'Select a note type above, then tap start';
 
-    if (process && fullTranscript.trim().length > 10) {
+    if (process && (hasSpoken || fullTranscript.trim().length > 0)) {
       document.getElementById('liveTranscript').style.display = 'none';
-      processWithClaude(fullTranscript.trim());
+      document.getElementById('statusMsg').textContent = '';
+      processWithClaude(fullTranscript.trim() || 'No transcript captured');
     } else if (process) {
       document.getElementById('liveTranscript').style.display = 'none';
-      showError('Not enough speech detected. Please try again.');
+      document.getElementById('statusMsg').textContent = '';
+      showError('No speech was captured. Make sure your mic is active and try speaking before hitting End.');
     } else {
       document.getElementById('liveTranscript').style.display = 'none';
+      document.getElementById('statusMsg').textContent = '';
     }
   }
 
