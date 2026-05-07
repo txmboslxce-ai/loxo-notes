@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loxo Note Taker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0e0e0e;
+    --surface: #161616;
+    --surface2: #1f1f1f;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #f0ede8;
+    --text2: #8a8680;
+    --text3: #555250;
+    --accent: #c8b89a;
+    --red: #d4614a;
+    --green: #5a9e72;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  html { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
+
+  body {
+    max-width: 580px;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 4rem;
+    min-height: 100vh;
+  }
+
+  .wordmark {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 2.5rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .wordmark::after {
+    content: '';
+    flex: 1;
+    height: 0.5px;
+    background: var(--border);
+  }
+
+  .type-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+  }
+
+  .type-btn {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 400;
+    padding: 6px 14px;
+    border-radius: 2px;
+    border: 0.5px solid var(--border2);
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.12s;
+    letter-spacing: 0.02em;
+  }
+
+  .type-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .type-btn.active {
+    background: var(--accent);
+    color: #0e0e0e;
+    border-color: var(--accent);
+    font-weight: 500;
+  }
+
+  .record-zone {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 4px;
+    padding: 2rem 1.5rem;
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .record-zone::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+
+  .record-zone.active::before { opacity: 0.6; }
+
+  .waveform {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    height: 32px;
+    opacity: 0.15;
+    transition: opacity 0.3s;
+  }
+
+  .waveform.active { opacity: 1; }
+
+  .wave-bar {
+    width: 3px;
+    border-radius: 2px;
+    background: var(--accent);
+    height: 4px;
+    transition: height 0.1s;
+  }
+
+  .waveform.active .wave-bar { animation: wave 0.8s ease-in-out infinite; }
+  .wave-bar:nth-child(1) { animation-delay: 0s; }
+  .wave-bar:nth-child(2) { animation-delay: 0.1s; }
+  .wave-bar:nth-child(3) { animation-delay: 0.2s; }
+  .wave-bar:nth-child(4) { animation-delay: 0.3s; }
+  .wave-bar:nth-child(5) { animation-delay: 0.15s; }
+  .wave-bar:nth-child(6) { animation-delay: 0.05s; }
+  .wave-bar:nth-child(7) { animation-delay: 0.25s; }
+  .wave-bar:nth-child(8) { animation-delay: 0.35s; }
+  .wave-bar:nth-child(9) { animation-delay: 0.1s; }
+  .wave-bar:nth-child(10) { animation-delay: 0.2s; }
+  .wave-bar:nth-child(11) { animation-delay: 0.0s; }
+  .wave-bar:nth-child(12) { animation-delay: 0.3s; }
+
+  @keyframes wave {
+    0%, 100% { height: 4px; }
+    50% { height: 20px; }
+  }
+
+  .timer {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 400;
+    letter-spacing: 0.05em;
+    color: var(--text);
+    display: none;
+  }
+
+  .timer.visible { display: block; }
+
+  .record-hint {
+    font-size: 12px;
+    color: var(--text3);
+    letter-spacing: 0.03em;
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .main-btn {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 10px 28px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.12s;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .btn-start {
+    background: var(--accent);
+    color: #0e0e0e;
+    border: none;
+  }
+
+  .btn-start:hover { opacity: 0.85; }
+
+  .btn-end {
+    background: transparent;
+    color: var(--red);
+    border: 0.5px solid var(--red);
+    display: none;
+  }
+
+  .btn-end:hover { background: rgba(212,97,74,0.1); }
+
+  .live-transcript {
+    width: 100%;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    line-height: 1.7;
+    max-height: 70px;
+    overflow-y: auto;
+    border-top: 0.5px solid var(--border);
+    padding-top: 0.75rem;
+    display: none;
+    word-break: break-word;
+  }
+
+  .processing-track {
+    width: 100%;
+    height: 1px;
+    background: var(--border);
+    border-radius: 1px;
+    overflow: hidden;
+    display: none;
+    margin-top: 0.25rem;
+  }
+
+  .processing-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    transition: width 0.3s ease;
+  }
+
+  .status {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    text-align: center;
+    min-height: 18px;
+    letter-spacing: 0.04em;
+  }
+
+  .error {
+    font-size: 12px;
+    color: var(--red);
+    text-align: center;
+    display: none;
+    padding: 0.5rem;
+    background: rgba(212,97,74,0.08);
+    border-radius: 2px;
+    border: 0.5px solid rgba(212,97,74,0.2);
+  }
+
+  .output-section { display: none; }
+
+  .output-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .output-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+
+  .output-header::after {
+    content: '';
+    flex: 1;
+    height: 0.5px;
+    background: var(--border);
+  }
+
+  .output-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+
+  .output-field {
+    padding: 0.875rem 1.125rem;
+    border-bottom: 0.5px solid var(--border);
+  }
+
+  .output-field:last-child { border-bottom: none; }
+
+  .field-key {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 5px;
+  }
+
+  .field-val {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.7;
+    white-space: pre-wrap;
+    outline: none;
+    font-family: var(--sans);
+    font-weight: 300;
+    min-height: 1.4em;
+  }
+
+  .field-val:focus {
+    background: var(--surface2);
+    border-radius: 2px;
+    padding: 3px 6px;
+    margin: -3px -6px;
+  }
+
+  .action-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .action-btn {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 8px 20px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.12s;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .btn-copy {
+    background: var(--accent);
+    color: #0e0e0e;
+    border: none;
+  }
+
+  .btn-copy:hover { opacity: 0.85; }
+
+  .btn-new {
+    background: transparent;
+    color: var(--text2);
+    border: 0.5px solid var(--border2);
+  }
+
+  .btn-new:hover { border-color: var(--text2); color: var(--text); }
+
+  .copy-confirm {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--green);
+    display: none;
+    letter-spacing: 0.05em;
+  }
+
+  .hint {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 0.75rem;
+    letter-spacing: 0.02em;
+  }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="wordmark">Loxo Note Taker</div>
+
+<div class="type-row">
+  <button class="type-btn active" onclick="setType(this,'Candidate Interview')">Candidate interview</button>
+  <button class="type-btn" onclick="setType(this,'BD Call')">BD call</button>
+  <button class="type-btn" onclick="setType(this,'Client Update')">Client update</button>
+  <button class="type-btn" onclick="setType(this,'Other')">Other</button>
+</div>
+
+<div class="record-zone" id="recordZone">
+  <div class="waveform" id="waveform">
+    <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+    <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+    <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+    <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+  </div>
+
+  <div class="timer" id="timer">0:00</div>
+
+  <div class="btn-row">
+    <button class="main-btn btn-start" id="startBtn" onclick="startRecording()">Start recording</button>
+    <button class="main-btn btn-end" id="endBtn" onclick="stopRecording(true)">End</button>
+  </div>
+
+  <div class="record-hint" id="recordHint">Select a note type above, then tap start</div>
+
+  <div class="live-transcript" id="liveTranscript"></div>
+
+  <div class="processing-track" id="processingTrack">
+    <div class="processing-fill" id="processingFill"></div>
+  </div>
+</div>
+
+<div class="status" id="statusMsg"></div>
+<div class="error" id="errorMsg"></div>
+
+<div class="output-section" id="outputSection">
+  <div class="output-header">
+    <div class="output-label">Structured note</div>
+  </div>
+
+  <div class="output-card" id="outputCard"></div>
+
+  <div class="action-row">
+    <button class="action-btn btn-copy" onclick="copyNote()">Copy to clipboard</button>
+    <button class="action-btn btn-new" onclick="resetAll()">New note</button>
+    <span class="copy-confirm" id="copyConfirm">Copied</span>
+  </div>
+
+  <p class="hint">All fields are editable before copying</p>
+</div>
+
+<script>
+  let isRecording = false;
+  let recognition = null;
+  let fullTranscript = '';
+  let timerInterval = null;
+  let seconds = 0;
+  let noteType = 'Candidate Interview';
+
+  function setType(btn, type) {
+    document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    noteType = type;
+  }
+
+  function formatTime(s) {
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }
+
+  function startRecording() {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      showError('Speech recognition not supported. Please use Chrome on desktop or Android.');
+      return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-CA';
+
+    fullTranscript = '';
+    isRecording = true;
+    seconds = 0;
+
+    document.getElementById('startBtn').style.display = 'none';
+    document.getElementById('endBtn').style.display = 'inline-block';
+    document.getElementById('timer').classList.add('visible');
+    document.getElementById('waveform').classList.add('active');
+    document.getElementById('recordZone').classList.add('active');
+    document.getElementById('liveTranscript').style.display = 'block';
+    document.getElementById('recordHint').textContent = 'Recording — tap End when finished';
+    document.getElementById('outputSection').style.display = 'none';
+    document.getElementById('errorMsg').style.display = 'none';
+    document.getElementById('statusMsg').textContent = '';
+
+    timerInterval = setInterval(() => {
+      seconds++;
+      document.getElementById('timer').textContent = formatTime(seconds);
+    }, 1000);
+
+    recognition.onresult = (e) => {
+      let final = '';
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) {
+          final += e.results[i][0].transcript + ' ';
+        } else {
+          interim += e.results[i][0].transcript;
+        }
+      }
+      fullTranscript += final;
+      const display = (fullTranscript + interim).slice(-400);
+      const lt = document.getElementById('liveTranscript');
+      lt.textContent = display;
+      lt.scrollTop = lt.scrollHeight;
+    };
+
+    recognition.onerror = (e) => {
+      if (e.error === 'no-speech') return;
+      stopRecording(false);
+      showError('Microphone error: ' + e.error + '. Please try again.');
+    };
+
+    recognition.onend = () => {
+      if (isRecording) recognition.start();
+    };
+
+    recognition.start();
+  }
+
+  function stopRecording(process) {
+    isRecording = false;
+    clearInterval(timerInterval);
+
+    if (recognition) {
+      recognition.onend = null;
+      recognition.stop();
+    }
+
+    document.getElementById('endBtn').style.display = 'none';
+    document.getElementById('startBtn').style.display = 'inline-block';
+    document.getElementById('timer').classList.remove('visible');
+    document.getElementById('waveform').classList.remove('active');
+    document.getElementById('recordZone').classList.remove('active');
+    document.getElementById('recordHint').textContent = 'Select a note type above, then tap start';
+
+    if (process && fullTranscript.trim().length > 10) {
+      document.getElementById('liveTranscript').style.display = 'none';
+      processWithClaude(fullTranscript.trim());
+    } else if (process) {
+      document.getElementById('liveTranscript').style.display = 'none';
+      showError('Not enough speech detected. Please try again.');
+    } else {
+      document.getElementById('liveTranscript').style.display = 'none';
+    }
+  }
+
+  async function processWithClaude(transcript) {
+    const track = document.getElementById('processingTrack');
+    const fill = document.getElementById('processingFill');
+    const status = document.getElementById('statusMsg');
+
+    track.style.display = 'block';
+    status.textContent = 'structuring notes...';
+
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+      progress = Math.min(progress + 2, 88);
+      fill.style.width = progress + '%';
+    }, 120);
+
+    const systemPrompt = `You are an executive search assistant. You receive a raw voice transcript from a recruiter after a ${noteType}. Structure it into clean CRM notes. Be concise. Preserve names, companies, dates, and numbers exactly as spoken. Do not add information not in the transcript.
+
+Return ONLY a valid JSON object with these keys:
+- summary: 2-3 sentence overview string
+- keyPoints: array of up to 6 bullet strings (no bullet characters)
+- nextActions: array of action strings (no numbers)
+- followUpDate: string or null if not mentioned
+- fitNotes: gut feel, culture fit, red flags as a string — only populate for candidate interviews, otherwise null
+
+Return pure JSON only. No markdown. No backticks. No preamble.`;
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: transcript }]
+        })
+      });
+
+      clearInterval(progressInterval);
+      fill.style.width = '100%';
+
+      const data = await res.json();
+      const text = data.content.map(b => b.text || '').join('');
+      const clean = text.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(clean);
+
+      renderOutput({ type: noteType, ...parsed });
+      track.style.display = 'none';
+      fill.style.width = '0%';
+      status.textContent = '';
+
+    } catch (err) {
+      clearInterval(progressInterval);
+      track.style.display = 'none';
+      fill.style.width = '0%';
+      status.textContent = '';
+      showError('Processing failed. Check your connection and try again.');
+    }
+  }
+
+  function renderOutput(d) {
+    const card = document.getElementById('outputCard');
+    const fields = [
+      { key: 'Type', val: d.type },
+      { key: 'Summary', val: d.summary },
+      { key: 'Key points', val: (d.keyPoints || []).map((p, i) => `${i + 1}. ${p}`).join('\n') },
+      { key: 'Next actions', val: (d.nextActions || []).map((a, i) => `${i + 1}. ${a}`).join('\n') },
+    ];
+    if (d.followUpDate) fields.push({ key: 'Follow-up date', val: d.followUpDate });
+    if (d.fitNotes) fields.push({ key: 'Fit notes', val: d.fitNotes });
+
+    card.innerHTML = fields.map(f => `
+      <div class="output-field">
+        <div class="field-key">${f.key}</div>
+        <div class="field-val" contenteditable="true" data-key="${f.key}">${f.val || ''}</div>
+      </div>
+    `).join('');
+
+    const out = document.getElementById('outputSection');
+    out.style.display = 'block';
+    setTimeout(() => out.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+  }
+
+  function copyNote() {
+    const fields = document.querySelectorAll('.field-val');
+    let text = '';
+    fields.forEach(f => {
+      const val = f.textContent.trim();
+      if (val) text += `${f.dataset.key.toUpperCase()}\n${val}\n\n`;
+    });
+
+    navigator.clipboard.writeText(text.trim()).then(() => {
+      const conf = document.getElementById('copyConfirm');
+      conf.style.display = 'inline';
+      setTimeout(() => conf.style.display = 'none', 2000);
+    });
+  }
+
+  function resetAll() {
+    fullTranscript = '';
+    document.getElementById('outputSection').style.display = 'none';
+    document.getElementById('liveTranscript').textContent = '';
+    document.getElementById('liveTranscript').style.display = 'none';
+    document.getElementById('statusMsg').textContent = '';
+    document.getElementById('errorMsg').style.display = 'none';
+    document.getElementById('copyConfirm').style.display = 'none';
+    document.getElementById('processingTrack').style.display = 'none';
+    document.getElementById('processingFill').style.width = '0%';
+    document.getElementById('timer').textContent = '0:00';
+    document.getElementById('timer').classList.remove('visible');
+    document.getElementById('waveform').classList.remove('active');
+    document.getElementById('recordZone').classList.remove('active');
+    document.getElementById('recordHint').textContent = 'Select a note type above, then tap start';
+    document.getElementById('startBtn').style.display = 'inline-block';
+    document.getElementById('endBtn').style.display = 'none';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('errorMsg');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+</script>
+
+</body>
+</html>
